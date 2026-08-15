@@ -49,3 +49,69 @@ stages:
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)/webapp'
         ArtifactName: 'eshoponweb-drop'
+
+- stage: DeployDev
+  displayName: 'Deploy to Development'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployDevJob
+    displayName: 'Deploy to Dev App Service'
+    environment: 'Development'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure App Service - Dev'
+            inputs:
+              azureSubscription: 'azure-eshoponweb-connection'
+              appType: 'webAppLinux'
+              appName: 'eshoponweb-dev-arsh123'
+              package: '$(Pipeline.Workspace)/eshoponweb-drop'
+
+- stage: DeployUAT
+  displayName: 'Deploy to UAT'
+  dependsOn: DeployDev
+  condition: succeeded()
+  jobs:
+  - deployment: DeployUATJob
+    displayName: 'Deploy to UAT App Service'
+    environment: 'UAT'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure App Service - UAT'
+            inputs:
+              azureSubscription: 'azure-eshoponweb-connection'
+              appType: 'webAppLinux'
+              appName: 'eshoponweb-uat-arsh123'
+              package: '$(Pipeline.Workspace)/eshoponweb-drop'
+
+- stage: DeployProd
+  displayName: 'Deploy to Production'
+  dependsOn: DeployUAT
+  condition: succeeded()
+  jobs:
+  - deployment: DeployProdJob
+    displayName: 'Deploy to Production App Service'
+    environment: 'Production'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure App Service - Prod'
+            inputs:
+              azureSubscription: 'azure-eshoponweb-connection'
+              appType: 'webAppLinux'
+              appName: 'eshoponweb-prod-arsh123'
+              package: '$(Pipeline.Workspace)/eshoponweb-drop'

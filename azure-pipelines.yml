@@ -1,0 +1,51 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  webProject: 'src/Web/Web.csproj'
+  testProject: 'tests/UnitTests/UnitTests.csproj'
+
+stages:
+- stage: Build
+  displayName: 'Build, Test, and Package'
+  jobs:
+  - job: BuildAndTest
+    displayName: 'Build and Test'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET 8 SDK'
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+
+    - script: dotnet restore eShopOnWeb.sln
+      displayName: 'Restore NuGet packages'
+
+    - script: dotnet build eShopOnWeb.sln --configuration $(buildConfiguration) --no-restore
+      displayName: 'Build solution'
+
+    - script: dotnet test $(testProject) --configuration $(buildConfiguration) --no-build --logger trx --results-directory $(Agent.TempDirectory)/TestResults
+      displayName: 'Run unit tests'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results'
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '*.trx'
+        searchFolder: '$(Agent.TempDirectory)/TestResults'
+
+    - script: dotnet publish $(webProject) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/webapp --no-build
+      displayName: 'Publish web app'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/webapp'
+        ArtifactName: 'eshoponweb-drop'

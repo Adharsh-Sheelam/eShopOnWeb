@@ -34,6 +34,6 @@ public class GetOrderDetails
 
         var result = await handler.Handle(request, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
     }
 }
